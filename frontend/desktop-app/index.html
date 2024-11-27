@@ -57,11 +57,13 @@
     <div id="register-modal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="hideRegister()">&times;</span>
-            <h2>Register</h2>
-            <input type="email" id="register-email" placeholder="Email">
-            <input type="password" id="register-password" placeholder="Password">
-            <input type="password" id="register-confirm-password" placeholder="Confirm Password">
-            <button onclick="register()">Register</button>
+            <h2>Create Account</h2>
+            <form class="register-form" onsubmit="event.preventDefault(); register();">
+                <input type="email" id="register-email" placeholder="Email" required>
+                <input type="password" id="register-password" placeholder="Password" required>
+                <input type="password" id="register-confirm-password" placeholder="Confirm Password" required>
+                <button type="submit">Create Account</button>
+            </form>
         </div>
     </div>
     <div id="toast" class="toast"></div>

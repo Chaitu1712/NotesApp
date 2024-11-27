@@ -3,7 +3,7 @@ const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 
 let mainWindow;
-let floatingNoteWindow;
+let floatingNotes = new Map(); // Replace floatingNoteWindow with a Map
 let tray;
 
 function createMainWindow() {
@@ -24,26 +24,18 @@ function createMainWindow() {
     mainWindow.show(); // Show window when content is ready
   });
 
-  // Prevent window from being closed directly
+  // Update close behavior to minimize to tray instead
   mainWindow.on('close', function(event) {
     if (!app.isQuitting) {
       event.preventDefault();
       mainWindow.hide();
+      return false;
     }
-    return false;
   });
 }
 
 function createFloatingNote(event, noteData) {
-  if (floatingNoteWindow) {
-    floatingNoteWindow.focus();
-    if (noteData) {
-      floatingNoteWindow.webContents.send('load-note', noteData);
-    }
-    return;
-  }
-
-  floatingNoteWindow = new BrowserWindow({
+  const floatingWindow = new BrowserWindow({
     width: 300,
     height: 400,
     frame: false,
@@ -53,32 +45,36 @@ function createFloatingNote(event, noteData) {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      devTools: !app.isPackaged
     }
   });
 
-  floatingNoteWindow.once('ready-to-show', () => {
-    floatingNoteWindow.show();
+  const windowId = floatingWindow.id;
+  floatingNotes.set(windowId, floatingWindow);
+
+  floatingWindow.once('ready-to-show', () => {
+    floatingWindow.show();
   });
 
-  floatingNoteWindow.loadFile('floating-note.html');
+  floatingWindow.loadFile('floating-note.html');
   
-  floatingNoteWindow.on('blur', () => {
-    floatingNoteWindow.webContents.send('window-blur');
+  floatingWindow.on('blur', () => {
+    floatingWindow.webContents.send('window-blur');
   });
 
-  floatingNoteWindow.on('focus', () => {
-    floatingNoteWindow.webContents.send('window-focus');
+  floatingWindow.on('focus', () => {
+    floatingWindow.webContents.send('window-focus');
   });
 
-  floatingNoteWindow.webContents.on('did-finish-load', () => {
+  floatingWindow.webContents.on('did-finish-load', () => {
     if (noteData) {
-      floatingNoteWindow.webContents.send('load-note', noteData);
+      floatingWindow.webContents.send('load-note', noteData);
     }
   });
 
-  floatingNoteWindow.on('closed', () => {
-    floatingNoteWindow = null;
+  floatingWindow.on('closed', () => {
+    floatingNotes.delete(windowId);
   });
 }
 
@@ -87,9 +83,13 @@ function createTray() {
   
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Show App',
+      label: 'Show Window',
       click: () => {
-        mainWindow.show();
+        if (mainWindow.isVisible()) {
+          mainWindow.hide();
+        } else {
+          mainWindow.show();
+        }
       }
     },
     {
@@ -111,17 +111,26 @@ function createTray() {
   tray.setToolTip('Notes App');
   tray.setContextMenu(contextMenu);
 
+  // Update tray click to toggle window visibility
   tray.on('click', () => {
-    mainWindow.show();
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
   });
 }
 
 ipcMain.on('create-floating-note', createFloatingNote);
-ipcMain.on('close-floating-note', () => {
-  if (floatingNoteWindow) floatingNoteWindow.close();
+ipcMain.on('close-floating-note', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) win.close();
 });
-ipcMain.on('minimize-floating-note', () => {
-  if (floatingNoteWindow) floatingNoteWindow.minimize();
+
+ipcMain.on('minimize-floating-note', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) win.minimize();
 });
 
 ipcMain.on('note-saved', () => {
@@ -146,4 +155,9 @@ app.on('activate', () => {
     createMainWindow();
   }
   mainWindow.show();
+});
+
+// Update quit handling
+app.on('before-quit', () => {
+  app.isQuitting = true;
 });

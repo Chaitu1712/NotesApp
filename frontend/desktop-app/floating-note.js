@@ -4,17 +4,62 @@ const API_URL = 'http://localhost:3000';
 
 let floatingQuill;
 let currentNoteId = null;
+let autoSaveTimeout;
+let syncInterval;
+let lastKnownContent = '';
+let isLocalChange = false;
+
+// Add auto-save function
+function startAutoSave() {
+    clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = setTimeout(saveNewNote, 800);  // Faster auto-save for better responsiveness
+}
+
+// Add sync function
+async function checkForUpdates() {
+    if (!currentNoteId || isLocalChange) {
+        isLocalChange = false;
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/notes/${currentNoteId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const remoteNote = response.data;
+        if (remoteNote.content !== lastKnownContent) {
+            lastKnownContent = remoteNote.content;
+            floatingQuill.root.innerHTML = remoteNote.content;
+            document.getElementById('floating-note-title').value = remoteNote.title;
+            document.querySelector('.drag-handle').textContent = remoteNote.title;
+        }
+    } catch (error) {
+        console.error('Failed to sync note:', error);
+    }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     floatingQuill = new Quill('#floating-quill', {
         theme: 'snow',
         modules: {
             toolbar: [
-                ['bold', 'italic'],
+                ['bold', 'italic','underline'],
+                [{ 'list': 'ordered'}],
+                [{'color':[]}],
                 ['clean']
             ]
         }
     });
+
+    // Set initial content for new notes
+    if (!currentNoteId) {
+        const now = new Date().toLocaleTimeString();
+        document.getElementById('floating-note-title').value = `Quick Note ${now}`;
+        document.querySelector('.drag-handle').textContent = `Quick Note ${now}`;
+        floatingQuill.setText('Start typing your note here...');
+    }
 
     document.getElementById('minimize-btn').addEventListener('click', () => {
         ipcRenderer.send('minimize-floating-note');
@@ -26,25 +71,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('save-note-btn').addEventListener('click', saveNewNote);
 
+    // Add title change listener
+    document.getElementById('floating-note-title').addEventListener('input', (e) => {
+        const title = e.target.value || 'Quick Note';
+        document.querySelector('.drag-handle').textContent = title;
+        startAutoSave();
+    });
+
+    // Add auto-save listeners
+    floatingQuill.on('text-change', () => {
+        isLocalChange = true;
+        startAutoSave();
+    });
+
     // Add listener for loading notes
     ipcRenderer.on('load-note', (event, note) => {
+        clearTimeout(autoSaveTimeout); // Clear any pending auto-saves
+        clearInterval(syncInterval);
         currentNoteId = note.id;
-        document.getElementById('floating-note-title').value = note.title || '';
+        const title = note.title || 'Quick Note';
+        document.getElementById('floating-note-title').value = title;
+        document.querySelector('.drag-handle').textContent = title;
         floatingQuill.root.innerHTML = note.content || '';
         document.getElementById('save-note-btn').textContent = 'Update Note';
+        lastKnownContent = note.content || '';
+        // Start polling for changes
+        syncInterval = setInterval(checkForUpdates, 5000);  // Longer sync interval to reduce server load
     });
 
     // Add window focus/blur handlers
     ipcRenderer.on('window-blur', () => {
-        document.body.classList.add('translucent');
+        document.getElementById('floating-editor').classList.add('translucent');
     });
 
     ipcRenderer.on('window-focus', () => {
-        document.body.classList.remove('translucent');
+        document.getElementById('floating-editor').classList.remove('translucent');
     });
 });
 
 async function saveNewNote() {
+    isLocalChange = true;
+    clearTimeout(autoSaveTimeout);  // Clear pending auto-saves
     const content = floatingQuill.root.innerHTML;
     const title = document.getElementById('floating-note-title').value;
     const token = localStorage.getItem('token');
@@ -59,19 +126,26 @@ async function saveNewNote() {
             );
         } else {
             // Create new note
-            await axios.post(
+            const response = await axios.post(
                 `${API_URL}/notes`,
                 { content, title: title || 'Quick Note' },
                 { headers: { 'Authorization': `Bearer ${token}` }}
             );
+            // Update currentNoteId with the new note's ID
+            currentNoteId = response.data.id;
+            document.getElementById('save-note-btn').textContent = 'Update Note';
         }
         
-        floatingQuill.setText('');
-        document.getElementById('floating-note-title').value = '';
-        document.getElementById('save-note-btn').textContent = 'Save';
-        currentNoteId = null;
+        lastKnownContent = content;
+        // Just notify main window to refresh its list
         ipcRenderer.send('note-saved');
     } catch (error) {
         console.error('Failed to save note:', error);
     }
 }
+
+// Clean up auto-save when window closes
+window.addEventListener('beforeunload', () => {
+    clearTimeout(autoSaveTimeout);
+    clearInterval(syncInterval);
+});

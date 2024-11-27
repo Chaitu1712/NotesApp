@@ -28,18 +28,33 @@
     },
     "files": [
       "index.js",
+      "preload.js",
+      "floating-note.js",
+      "renderer.js",
+      "index.html",
+      "floating-note.html",
+      "styles.css",
+      "floating-note.css",
+      "assets/**/*",
+      "!assets/**/*.psd",
+      "!assets/**/*.xcf",
+      "!**/*.map",
+      "!**/*.md",
       "dist/**/*",
       "node_modules/**/*",
       "package.json"
     ],
     "win": {
       "target": "nsis",
-      "icon": "build/icon.ico"
+      "icon": "build/icon.ico",
+      "compression": "maximum"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": true,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "asar": true,
+    "compression": "maximum"
   }
 }

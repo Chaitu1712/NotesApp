@@ -15,6 +15,28 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
+// Add single note fetch endpoint
+router.get('/:id', authenticateToken, async (req, res) => {
+    const noteId = req.params.id;
+    const pool = req.pool;
+
+    try {
+        // Verify note ownership and get note
+        const result = await pool.query(
+            'SELECT * FROM notes WHERE id = $1 AND user_id = $2',
+            [noteId, req.user.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch note', details: err });
+    }
+});
+
 // Create a new note
 router.post('/', authenticateToken, async (req, res) => {
     const { title, content } = req.body;
@@ -31,10 +53,10 @@ router.post('/', authenticateToken, async (req, res) => {
 
     try {
         const result = await pool.query(
-            'INSERT INTO notes (user_id, title, content) VALUES ($1, $2, $3) RETURNING id',
+            'INSERT INTO notes (user_id, title, content) VALUES ($1, $2, $3) RETURNING id, title, content, created_at, updated_at',
             [req.user.userId, title, content]
         );
-        res.status(201).json({ noteId: result.rows[0].id });
+        res.status(201).json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: 'Failed to create note', details: err });
     }
@@ -69,13 +91,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'Unauthorized' });
         }
 
-        // Update note
-        await pool.query(
-            'UPDATE notes SET title = $1, content = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND user_id = $4',
+        // Update note and return updated data
+        const result = await pool.query(
+            'UPDATE notes SET title = $1, content = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND user_id = $4 RETURNING *',
             [title, content, noteId, req.user.userId]
         );
 
-        res.json({ message: 'Note updated successfully' });
+        res.json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: 'Failed to update note', details: err });
     }

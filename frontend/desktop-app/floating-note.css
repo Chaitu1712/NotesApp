@@ -1,21 +1,23 @@
-body {
+#floating-editor {
     margin: 0;
     background: rgba(250, 248, 115, 0.95);
-    backdrop-filter: blur(5px);
-    border-radius: 8px;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, background-color 0.3s;
+    opacity: 1;
 }
 
-body.translucent {
-    background: rgba(250, 248, 115, 0.95);
-    opacity: 0.25;
+#floating-editor.translucent {
+    opacity: 0.45 !important;
+    backdrop-filter: blur(10px);
+    pointer-events: none;
+    background-color: rgba(255, 255, 255, 0.6);
 }
 
 .titlebar {
     -webkit-app-region: drag;
     height: 32px;
-    background: rgba(200, 200, 200, 0.9);
+    background: rgba(250, 248, 115, 0.95);
+    opacity: 1;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -41,21 +43,33 @@ body.translucent {
 }
 
 #floating-note-title {
+    background: inherit;
+    backdrop-filter: inherit;
     width: 96%;
     padding: 8px;
     margin-bottom: 10px;
     border:none;
     border-radius: 4px;
     font-size: 14px;
+    color: #666;
+    transition: color 0.3s;
 }
 
+#floating-note-title input{
+    background: inherit;
+    border: none;
+}
+#floating-note-title input:focus{
+    outline: none;
+}
 #floating-editor input:focus {
     outline: none;
 }
 
 #floating-quill {
-    height: calc(100vh - 210px);
+    height: calc(100vh - 260px);
     border: none;
+    background: transparent;
 }
 
 #save-note-btn {
@@ -69,6 +83,37 @@ body.translucent {
     cursor: pointer;
 }
 
-.ql-toolbar .q1-editor {
-    border: none;
+.ql-toolbar, .ql-container {
+    border: none !important;
+    background: transparent;
+}
+
+.ql-editor {
+    background: transparent;
+    color: #666;
+    transition: color 0.3s;
+}
+
+#floating-editor.translucent #floating-note-title,
+#floating-editor.translucent .ql-editor {
+    color: #1e3e7e; /* Complementary blue color when transparent */
+}
+
+/* Ensure toolbar icons are visible in both states */
+#floating-editor.translucent .ql-toolbar button {
+    color: #1e3e7e;
+}
+
+#floating-editor .ql-toolbar button {
+    color: #666;
+    transition: color 0.3s;
+}
+
+/* Update title bar text colors */
+.titlebar .drag-handle {
+    transition: color 0.3s;
+}
+
+#floating-editor.translucent + .titlebar .drag-handle {
+    color: #1e3e7e;
 }
