@@ -1,8 +1,15 @@
 body {
     margin: 0;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(250, 248, 115, 0.95);
+    backdrop-filter: blur(5px);
     border-radius: 8px;
     overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+body.translucent {
+    background: rgba(250, 248, 115, 0.95);
+    opacity: 0.25;
 }
 
 .titlebar {

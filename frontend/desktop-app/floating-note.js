@@ -33,6 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
         floatingQuill.root.innerHTML = note.content || '';
         document.getElementById('save-note-btn').textContent = 'Update Note';
     });
+
+    // Add window focus/blur handlers
+    ipcRenderer.on('window-blur', () => {
+        document.body.classList.add('translucent');
+    });
+
+    ipcRenderer.on('window-focus', () => {
+        document.body.classList.remove('translucent');
+    });
 });
 
 async function saveNewNote() {

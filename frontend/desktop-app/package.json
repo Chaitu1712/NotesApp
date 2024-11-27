@@ -5,22 +5,41 @@
   "main": "index.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "build": "electron-builder"
   },
   "dependencies": {
+    "app-builder-bin": "^4.2.0",
     "axios": "^1.6.0",
-    "electron": "^28.2.0",
     "electron-store": "^8.1.0",
     "notes-desktop": "file:",
-    "quill": "^2.0.2"
+    "quill": "^2.0.2",
+    "v8-compile-cache": "^2.4.0"
   },
   "devDependencies": {
-    "electron-builder": "^24.9.0"
+    "electron": "^28.2.0",
+    "electron-builder": "^24.13.3"
   },
   "build": {
+    "appId": "com.chaitanya.notesapp",
+    "productName": "Notes",
+    "directories": {
+      "output": "dist"
+    },
     "files": [
-      "**/*",
-      "assets/*"
-    ]
+      "index.js",
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

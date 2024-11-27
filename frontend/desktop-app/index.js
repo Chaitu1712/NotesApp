@@ -1,3 +1,4 @@
+require('v8-compile-cache');  // Add this as the first line
 const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 
@@ -9,13 +10,19 @@ function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: false, // Hide window until ready
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
   mainWindow.loadFile('index.html');
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show(); // Show window when content is ready
+  });
 
   // Prevent window from being closed directly
   mainWindow.on('close', function(event) {
@@ -40,16 +47,30 @@ function createFloatingNote(event, noteData) {
     width: 300,
     height: 400,
     frame: false,
-    transparent: false,
+    transparent: true,
+    show: false,
     alwaysOnTop: true,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      preload: path.join(__dirname, 'preload.js')
     }
+  });
+
+  floatingNoteWindow.once('ready-to-show', () => {
+    floatingNoteWindow.show();
   });
 
   floatingNoteWindow.loadFile('floating-note.html');
   
+  floatingNoteWindow.on('blur', () => {
+    floatingNoteWindow.webContents.send('window-blur');
+  });
+
+  floatingNoteWindow.on('focus', () => {
+    floatingNoteWindow.webContents.send('window-focus');
+  });
+
   floatingNoteWindow.webContents.on('did-finish-load', () => {
     if (noteData) {
       floatingNoteWindow.webContents.send('load-note', noteData);
