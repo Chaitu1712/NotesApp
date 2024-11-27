@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Note</title>
+    <link rel="stylesheet" href="floating-note.css">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+</head>
+<body>
+    <div class="titlebar">
+        <div class="drag-handle">Quick Note</div>
+        <div class="window-controls">
+            <button id="minimize-btn">-</button>
+            <button id="close-btn">×</button>
+        </div>
+    </div>
+    <div id="floating-editor">
+        <input type="text" id="floating-note-title" placeholder="Note Title">
+        <hr style="width: 100%;">
+        <div id="floating-quill"></div>
+        <hr style="width: 100%;">
+        <button id="save-note-btn">Save</button>
+    </div>
+    <script src="floating-note.js"></script>
+</body>
+</html>

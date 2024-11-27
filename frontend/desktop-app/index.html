@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notes App</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Defer non-critical CSS -->
+    <!--
+    <link rel="preload" href="https://cdn.quilljs.com/1.3.6/quill.snow.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdn.quilljs.com/1.3.6/quill.snow.css"></noscript>
+    -->
+    <!-- Defer Quill.js loading -->
+    <!--
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js" defer></script>
+    -->
+    <script>
+        // Add electron bridge
+        if (window.require) {
+            window.electron = require('electron');
+        }
+    </script>
+</head>
+<body>
+    <div id="login-container">
+        <h2>Login</h2>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button class="button-with-loader" onclick="login()">
+            Login
+            <div class="loader" id="login-loader"></div>
+        </button>
+        <button onclick="showRegister()">Register</button>
+    </div>
+
+    <div id="notes-container" style="display: none;">
+        <div id="sidebar">
+            <div class="user-info">
+                <span id="user-email"></span>
+                <button onclick="logout()">Logout</button>
+            </div>
+            <button onclick="createFloatingNote()">Floating Note</button>
+            <div id="notes-list"></div>
+        </div>
+        <div id="content-area">
+            <div id="editor" style="display: none;">
+                <div class="editor-header">
+                    <input type="text" id="note-title" class="note-title-input" placeholder="Note Title">
+                    <button class="close-editor" onclick="closeEditor()">×</button>
+                </div>
+                <div id="quill-editor"></div>
+                <button onclick="saveNote()">Save</button>
+            </div>
+            <div id="placeholder">
+                <div class="placeholder-content">
+                    <h2>Welcome to Notes App</h2>
+                    <p>Select a note from the sidebar or create a new one to get started</p>
+                    <button onclick="createNote()">Create New Note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="register-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="hideRegister()">&times;</span>
+            <h2>Register</h2>
+            <input type="email" id="register-email" placeholder="Email">
+            <input type="password" id="register-password" placeholder="Password">
+            <input type="password" id="register-confirm-password" placeholder="Confirm Password">
+            <button onclick="register()">Register</button>
+        </div>
+    </div>
+    <div id="toast" class="toast"></div>
+    <div id="saving-indicator" class="saving-indicator">Saving...</div>
+    <script src="renderer.js"></script>
+</body>
+</html>
