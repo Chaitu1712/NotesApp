@@ -5,39 +5,13 @@ const API_URL = 'http://localhost:3000';
 let floatingQuill;
 let currentNoteId = null;
 let autoSaveTimeout;
-let syncInterval;
 let lastKnownContent = '';
 let isLocalChange = false;
-
+const now = new Date().toLocaleTimeString();
 // Add auto-save function
 function startAutoSave() {
     clearTimeout(autoSaveTimeout);
     autoSaveTimeout = setTimeout(saveNewNote, 800);  // Faster auto-save for better responsiveness
-}
-
-// Add sync function
-async function checkForUpdates() {
-    if (!currentNoteId || isLocalChange) {
-        isLocalChange = false;
-        return;
-    }
-
-    try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/notes/${currentNoteId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        const remoteNote = response.data;
-        if (remoteNote.content !== lastKnownContent) {
-            lastKnownContent = remoteNote.content;
-            floatingQuill.root.innerHTML = remoteNote.content;
-            document.getElementById('floating-note-title').value = remoteNote.title;
-            document.querySelector('.drag-handle').textContent = remoteNote.title;
-        }
-    } catch (error) {
-        console.error('Failed to sync note:', error);
-    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -55,14 +29,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set initial content for new notes
     if (!currentNoteId) {
-        const now = new Date().toLocaleTimeString();
-        document.getElementById('floating-note-title').value = `Quick Note ${now}`;
         document.querySelector('.drag-handle').textContent = `Quick Note ${now}`;
         floatingQuill.setText('Start typing your note here...');
+        const titleInput = document.getElementById('floating-note-title');
+        titleInput.setAttribute('placeholder', `Quick Note ${now}`);
     }
 
     document.getElementById('minimize-btn').addEventListener('click', () => {
         ipcRenderer.send('minimize-floating-note');
+    });
+
+    document.getElementById('move-to-main-btn').addEventListener('click', () => {
+        if (currentNoteId) {
+            // Send current note data to main window
+            ipcRenderer.send('move-to-main', {
+                id: currentNoteId,
+                title: document.getElementById('floating-note-title').value,
+                content: floatingQuill.root.innerHTML
+            });
+            // Close this window
+            ipcRenderer.send('close-floating-note');
+        }
     });
 
     document.getElementById('close-btn').addEventListener('click', () => {
@@ -87,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add listener for loading notes
     ipcRenderer.on('load-note', (event, note) => {
         clearTimeout(autoSaveTimeout); // Clear any pending auto-saves
-        clearInterval(syncInterval);
         currentNoteId = note.id;
         const title = note.title || 'Quick Note';
         document.getElementById('floating-note-title').value = title;
@@ -95,8 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
         floatingQuill.root.innerHTML = note.content || '';
         document.getElementById('save-note-btn').textContent = 'Update Note';
         lastKnownContent = note.content || '';
-        // Start polling for changes
-        syncInterval = setInterval(checkForUpdates, 5000);  // Longer sync interval to reduce server load
     });
 
     // Add window focus/blur handlers
@@ -106,6 +90,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ipcRenderer.on('window-focus', () => {
         document.getElementById('floating-editor').classList.remove('translucent');
+    });
+
+    // Add focus handler for syncing
+    window.addEventListener('focus', async () => {
+        if (!currentNoteId) return;
+        
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${API_URL}/notes/${currentNoteId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            const remoteNote = response.data;
+            if (remoteNote.content !== lastKnownContent) {
+                lastKnownContent = remoteNote.content;
+                floatingQuill.root.innerHTML = remoteNote.content;
+                document.getElementById('floating-note-title').value = remoteNote.title;
+            }
+        } catch (error) {
+            console.error('Failed to sync note:', error);
+        }
     });
 });
 
@@ -121,14 +126,14 @@ async function saveNewNote() {
             // Update existing note
             await axios.put(
                 `${API_URL}/notes/${currentNoteId}`,
-                { content, title: title || 'Quick Note' },
+                { content, title: title || `Quick Note ${now}` },
                 { headers: { 'Authorization': `Bearer ${token}` }}
             );
         } else {
             // Create new note
             const response = await axios.post(
                 `${API_URL}/notes`,
-                { content, title: title || 'Quick Note' },
+                { content, title: title || `Quick Note ${now}` },
                 { headers: { 'Authorization': `Bearer ${token}` }}
             );
             // Update currentNoteId with the new note's ID
@@ -147,5 +152,4 @@ async function saveNewNote() {
 // Clean up auto-save when window closes
 window.addEventListener('beforeunload', () => {
     clearTimeout(autoSaveTimeout);
-    clearInterval(syncInterval);
 });

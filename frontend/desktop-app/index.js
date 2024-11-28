@@ -139,6 +139,14 @@ ipcMain.on('note-saved', () => {
   }
 });
 
+ipcMain.on('move-to-main', (event, noteData) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.webContents.send('open-note', noteData);
+  }
+});
+
 app.whenReady().then(() => {
   createMainWindow();
   createTray();

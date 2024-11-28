@@ -3,19 +3,7 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get all notes for the logged-in user
-router.get('/', authenticateToken, async (req, res) => {
-    const pool = req.pool;
-
-    try {
-        const result = await pool.query('SELECT * FROM notes WHERE user_id = $1', [req.user.userId]);
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch notes', details: err });
-    }
-});
-
-// Add single note fetch endpoint
+// Add single note fetch endpoint - Move this BEFORE the general routes
 router.get('/:id', authenticateToken, async (req, res) => {
     const noteId = req.params.id;
     const pool = req.pool;
@@ -34,6 +22,18 @@ router.get('/:id', authenticateToken, async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch note', details: err });
+    }
+});
+
+// Get all notes for the logged-in user
+router.get('/', authenticateToken, async (req, res) => {
+    const pool = req.pool;
+
+    try {
+        const result = await pool.query('SELECT * FROM notes WHERE user_id = $1', [req.user.userId]);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch notes', details: err });
     }
 });
 

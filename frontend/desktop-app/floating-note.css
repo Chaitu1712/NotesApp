@@ -36,6 +36,15 @@
     padding: 5px 10px;
 }
 
+#move-to-main-btn {
+    font-size: 18px;
+    padding: 5px 8px;
+}
+
+#move-to-main-btn:hover {
+    color: #4CAF50;
+}
+
 #floating-editor {
     height: calc(100vh - 100px);
     padding: 10px;

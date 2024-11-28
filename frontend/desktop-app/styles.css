@@ -94,6 +94,13 @@ body {
     transition: transform 0.2s ease;
 }
 
+.note-item span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px; /* Adjust based on your sidebar width */
+}
+
 .note-item:hover {
     background: #e0e0e0;
 }
