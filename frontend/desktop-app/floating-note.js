@@ -1,4 +1,5 @@
-const { ipcRenderer } = require('electron');
+const electron = require('electron');
+const ipcRenderer = electron.ipcRenderer;
 const axios = require('axios');
 const { initQuill } = require('./quill-init');
 
@@ -21,7 +22,7 @@ axios.defaults.timeout = 10000;
 axios.interceptors.request.use(config => {
     const token = localStorage.getItem('token');
     if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`;
+        config.headers['Authorization'] = `Bearer ${token}`; 
     }
     return config;
 }, error => Promise.reject(error));
@@ -48,7 +49,10 @@ function startAutoSave() {
     autoSaveTimeout = setTimeout(saveNewNote, 800);  // Faster auto-save for better responsiveness
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+// ...existing code...
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize Quill first before adding listeners
     floatingQuill = initQuill('#floating-quill', {
         toolbar: [
             ['bold', 'italic','underline'],
@@ -57,16 +61,29 @@ document.addEventListener('DOMContentLoaded', () => {
             ['clean']
         ]
     });
-
+    
     // Set initial content for new notes
     if (!currentNoteId) {
-
         document.querySelector('.drag-handle').textContent = `Quick Note ${now}`;
         floatingQuill.setText('Start typing your note here...');
         const titleInput = document.getElementById('floating-note-title');
         titleInput.setAttribute('placeholder', `Quick Note ${now}`);
     }
 
+    // Now add Quill text-change listener
+    floatingQuill.on('text-change', () => {
+        isLocalChange = true;
+        startAutoSave();
+    });
+
+    // Add other event listeners
+    // ...existing code...
+});
+
+// ...existing code...
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Use direct ipcRenderer calls
     document.getElementById('minimize-btn').addEventListener('click', () => {
         ipcRenderer.send('minimize-floating-note');
     });
@@ -94,12 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('floating-note-title').addEventListener('input', (e) => {
         const title = e.target.value || 'Quick Note';
         document.querySelector('.drag-handle').textContent = title;
-        startAutoSave();
-    });
-
-    // Add auto-save listeners
-    floatingQuill.on('text-change', () => {
-        isLocalChange = true;
         startAutoSave();
     });
 

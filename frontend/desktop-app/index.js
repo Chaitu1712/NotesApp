@@ -1,20 +1,32 @@
-require('v8-compile-cache');  // Add this as the first line
+require('v8-compile-cache');
 const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 
+// Pre-initialize variables
 let mainWindow;
-let floatingNotes = new Map(); // Replace floatingNoteWindow with a Map
+let floatingNotes = new Map();
 let tray;
+let isQuitting = false;
+
+// Optimize app startup
+app.commandLine.appendSwitch('disable-http-cache');
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
+
+// Add production flags
+if (process.env.NODE_ENV === 'production') {
+  app.commandLine.appendSwitch('disable-gpu-vsync');
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+}
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    show: false, // Hide window until ready
+    show: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      preload: path.join(__dirname, 'preload.js')
+      devTools: process.env.NODE_ENV !== 'production' // Disable devTools in production
     }
   });
 
@@ -26,7 +38,7 @@ function createMainWindow() {
 
   // Update close behavior to minimize to tray instead
   mainWindow.on('close', function(event) {
-    if (!app.isQuitting) {
+    if (!isQuitting) {
       event.preventDefault();
       mainWindow.hide();
       return false;
@@ -45,32 +57,31 @@ function createFloatingNote(event, noteData) {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      preload: path.join(__dirname, 'preload.js'),
-      devTools: !app.isPackaged
+      devTools: process.env.NODE_ENV !== 'production' // Disable devTools in production
     }
   });
 
   const windowId = floatingWindow.id;
   floatingNotes.set(windowId, floatingWindow);
 
+  floatingWindow.loadFile('floating-note.html');
+  
+  floatingWindow.webContents.on('did-finish-load', () => {
+    if (noteData) {
+      floatingWindow.webContents.send('load-note', noteData);
+    }
+  });
+
   floatingWindow.once('ready-to-show', () => {
     floatingWindow.show();
   });
 
-  floatingWindow.loadFile('floating-note.html');
-  
   floatingWindow.on('blur', () => {
     floatingWindow.webContents.send('window-blur');
   });
 
   floatingWindow.on('focus', () => {
     floatingWindow.webContents.send('window-focus');
-  });
-
-  floatingWindow.webContents.on('did-finish-load', () => {
-    if (noteData) {
-      floatingWindow.webContents.send('load-note', noteData);
-    }
   });
 
   floatingWindow.on('closed', () => {
@@ -102,7 +113,7 @@ function createTray() {
     {
       label: 'Quit',
       click: () => {
-        app.isQuitting = true;
+        isQuitting = true;
         app.quit();
       }
     }
@@ -147,9 +158,16 @@ ipcMain.on('move-to-main', (event, noteData) => {
   }
 });
 
+// Optimize app lifecycle
 app.whenReady().then(() => {
   createMainWindow();
   createTray();
+}).catch(console.error);
+
+// Optimize app quit
+app.on('before-quit', () => {
+  isQuitting = true;
+  floatingNotes.clear();
 });
 
 app.on('window-all-closed', () => {
@@ -159,13 +177,9 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+  if (!mainWindow) {
     createMainWindow();
+  } else {
+    mainWindow.show();
   }
-  mainWindow.show();
-});
-
-// Update quit handling
-app.on('before-quit', () => {
-  app.isQuitting = true;
 });

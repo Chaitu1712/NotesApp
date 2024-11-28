@@ -1,5 +1,7 @@
 const axios = require('axios');
 const { initQuill } = require('./quill-init');
+const electron = require('electron');
+const ipcRenderer = electron.ipcRenderer;
 
 // Add API configuration
 const API_CONFIG = {
@@ -115,15 +117,13 @@ function checkSession() {
 document.addEventListener('DOMContentLoaded', () => {
     checkSession();
 
-    if (window.electron) {
-        window.electron.ipcRenderer.on('note-saved', () => {
-            loadNotes();
-        });
-        
-        window.electron.ipcRenderer.on('open-note', (event, noteData) => {
-            selectNote(noteData);
-        });
-    }
+    ipcRenderer.on('note-saved', () => {
+        loadNotes();
+    });
+    
+    ipcRenderer.on('open-note', (event, noteData) => {
+        selectNote(noteData);
+    });
 
     // Login
     document.getElementById('login-btn').addEventListener('click', login);
@@ -228,9 +228,7 @@ async function loadNotes() {
 }
 
 function createFloatingNote() {
-    if (window.electron) {
-        window.electron.ipcRenderer.send('create-floating-note');
-    }
+    ipcRenderer.send('create-floating-note');
 }
 
 // Update logout to show placeholder
@@ -311,11 +309,12 @@ function displayNotes(notes) {
 }
 
 function openInFloating(note) {
-    event.stopPropagation(); // Prevent note selection
-    if (window.electron) {
-        // Always create a new floating note window
-        window.electron.ipcRenderer.send('create-floating-note', note);
-    }
+    event?.stopPropagation(); // Add optional chaining for safety
+    ipcRenderer.send('create-floating-note', {
+        id: note.id,
+        title: note.title || 'Untitled',
+        content: note.content || ''
+    });
 }
 
 // Update selectNote to handle editor visibility and start polling
@@ -330,6 +329,7 @@ async function selectNote(note) {
     const titleInput=document.getElementById('note-title');
     if(note.title === 'New Note') {
         titleInput.setAttribute('placeholder', 'New Note');
+        titleInput.value = '';
     }
     else
     titleInput.value = note.title;
