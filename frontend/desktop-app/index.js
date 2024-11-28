@@ -16,6 +16,7 @@ app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 if (process.env.NODE_ENV === 'production') {
   app.commandLine.appendSwitch('disable-gpu-vsync');
   app.commandLine.appendSwitch('disable-gpu-sandbox');
+  Menu.setApplicationMenu(null); // Remove menu bar in production
 }
 
 function createMainWindow() {
@@ -23,6 +24,7 @@ function createMainWindow() {
     width: 1200,
     height: 800,
     show: false,
+    autoHideMenuBar: true, // Hide menu bar by default
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -54,6 +56,7 @@ function createFloatingNote(event, noteData) {
     transparent: true,
     show: false,
     alwaysOnTop: true,
+    autoHideMenuBar: true, // Hide menu bar by default
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
