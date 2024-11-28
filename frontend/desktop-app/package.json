@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Notes Desktop Application",
   "main": "index.js",
+  "author": "Chaitu1712",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
@@ -21,7 +22,7 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.chaitanya.notesapp",
+    "appId": "com.chaitanyauike.notesapp",
     "productName": "Notes",
     "directories": {
       "output": "dist"
