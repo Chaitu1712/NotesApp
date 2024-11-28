@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Notes Desktop Application",
   "main": "index.js",
-  "author": "chaitanya-Uike",
+  "author": "Chaitu1712",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
@@ -22,7 +22,7 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.chaitanyauike.notesapp",
+    "appId": "com.chaitu1712.notesapp",
     "productName": "Notes",
     "directories": {
       "output": "dist"
@@ -36,6 +36,8 @@
       "floating-note.html",
       "styles.css",
       "floating-note.css",
+      "electrin-bridge.js",
+      "quill-init.js",
       "assets/**/*",
       "!assets/**/*.psd",
       "!assets/**/*.xcf",
