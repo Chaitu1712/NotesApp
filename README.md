@@ -101,7 +101,7 @@ npm run dev
 ## License
 ISC License
 
-Copyright (c) 2024 Chaitu1712
+Copyright (c) 2024 chaitanya-Uike
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above

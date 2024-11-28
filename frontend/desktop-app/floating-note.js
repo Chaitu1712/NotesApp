@@ -1,6 +1,40 @@
 const { ipcRenderer } = require('electron');
 const axios = require('axios');
-const API_URL = 'http://localhost:3000';
+const { initQuill } = require('./quill-init');
+
+// Add API configuration
+const API_CONFIG = {
+    development: 'http://localhost:3000',
+    production: 'http://localhost:3000',
+    staging: 'http://localhost:3000'
+};
+
+const ENV = process.env.NODE_ENV || 'development';
+const API_URL = API_CONFIG[ENV];
+
+// Configure axios defaults
+axios.defaults.baseURL = API_URL;
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.defaults.timeout = 10000;
+
+// Add security interceptors
+axios.interceptors.request.use(config => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+}, error => Promise.reject(error));
+
+axios.interceptors.response.use(
+    response => response,
+    error => {
+        if (error.response?.status === 401) {
+            ipcRenderer.send('unauthorized');
+        }
+        return Promise.reject(error);
+    }
+);
 
 let floatingQuill;
 let currentNoteId = null;
@@ -15,20 +49,18 @@ function startAutoSave() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    floatingQuill = new Quill('#floating-quill', {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic','underline'],
-                [{ 'list': 'ordered'}],
-                [{'color':[]}],
-                ['clean']
-            ]
-        }
+    floatingQuill = initQuill('#floating-quill', {
+        toolbar: [
+            ['bold', 'italic','underline'],
+            [{ 'list': 'ordered'}],
+            [{'color':[]}],
+            ['clean']
+        ]
     });
 
     // Set initial content for new notes
     if (!currentNoteId) {
+
         document.querySelector('.drag-handle').textContent = `Quick Note ${now}`;
         floatingQuill.setText('Start typing your note here...');
         const titleInput = document.getElementById('floating-note-title');

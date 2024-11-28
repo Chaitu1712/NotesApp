@@ -1,5 +1,61 @@
 const axios = require('axios');
-const API_URL = 'http://localhost:3000';
+const { initQuill } = require('./quill-init');
+
+// Add API configuration
+const API_CONFIG = {
+    development: 'http://localhost:3000',
+    production: 'http://localhost:3000', // Update with your production API URL
+    staging: 'http://localhost:3000'      // Update with your staging API URL
+};
+
+// Determine environment
+const ENV = process.env.NODE_ENV || 'development';
+const API_URL = API_CONFIG[ENV];
+
+// Configure axios defaults
+axios.defaults.baseURL = API_URL;
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.timeout = 10000; // 10 seconds timeout
+
+// Add request interceptor for security headers
+axios.interceptors.request.use(config => {
+    // Add CSRF token if available
+    const token = localStorage.getItem('csrf-token');
+    if (token) {
+        config.headers['X-CSRF-Token'] = token;
+    }
+    return config;
+}, error => {
+    return Promise.reject(error);
+});
+
+// Add response interceptor for error handling
+axios.interceptors.response.use(
+    response => response,
+    error => {
+        if (error.response) {
+            switch (error.response.status) {
+                case 401:
+                    // Handle unauthorized access
+                    logout();
+                    break;
+                case 403:
+                    // Handle forbidden access
+                    showToast('Access denied', 'error');
+                    break;
+                case 429:
+                    // Handle rate limiting
+                    showToast('Too many requests. Please try again later.', 'error');
+                    break;
+            }
+        } else if (error.code === 'ECONNABORTED') {
+            showToast('Request timed out. Please try again.', 'error');
+        }
+        return Promise.reject(error);
+    }
+);
+
 let quill = null;
 let currentNote = null;
 let quillLoaded = false;
@@ -30,7 +86,19 @@ function checkSession() {
     
     if (token && loginTime && email) {
         const currentTime = new Date().getTime();
-        const thirtyDays = 720 * 3600* 1000; // 30 days in milliseconds
+        const thirtyDays = 720 * 3600 * 1000;
+        
+        // Add token validation
+        try {
+            const tokenData = JSON.parse(atob(token.split('.')[1]));
+            if (tokenData.exp * 1000 < currentTime) {
+                logout();
+                return;
+            }
+        } catch (e) {
+            logout();
+            return;
+        }
         
         if (currentTime - parseInt(loginTime) < thirtyDays) {
             document.getElementById('user-email').textContent = email.split('@')[0];
@@ -56,29 +124,80 @@ document.addEventListener('DOMContentLoaded', () => {
             selectNote(noteData);
         });
     }
+
+    // Login
+    document.getElementById('login-btn').addEventListener('click', login);
+
+    // Register
+    document.getElementById('show-register-btn').addEventListener('click', showRegister);
+    document.getElementById('hide-register-btn').addEventListener('click', hideRegister);
+    document.getElementById('register-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        register();
+    });
+
+    // Notes actions
+    document.getElementById('create-floating-btn').addEventListener('click', createFloatingNote);
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    
+    // Modal click outside
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('register-modal');
+        if (event.target === modal) {
+            hideRegister();
+        }
+    });
+
+    // Title input for auto-save
+    document.getElementById('note-title').addEventListener('input', () => {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(saveNote, 1000);
+    });
+
+    // Add editor control listeners
+    document.getElementById('close-editor-btn').addEventListener('click', closeEditor);
+    document.getElementById('save-note-btn').addEventListener('click', saveNote);
+    document.getElementById('create-note-btn').addEventListener('click', createNote);
 });
 
 // Update login function
 async function login() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
+    
+    // Basic input validation
+    if (!email || !password || !email.includes('@')) {
+        showToast('Invalid email or password', 'error');
+        return;
+    }
+    
     const loginLoader = document.getElementById('login-loader');
     loginLoader.style.display = 'block';
 
     try {
-        const response = await axios.post(`${API_URL}/auth/login`, {
+        const response = await axios.post('/auth/login', {
             email,
             password
         });
         
+        // Validate token structure
+        const token = response.data.token;
+        if (!token || token.split('.').length !== 3) {
+            throw new Error('Invalid token received');
+        }
+        
         const loginTime = new Date().getTime();
-        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('token', token);
         localStorage.setItem('loginTime', loginTime);
         localStorage.setItem('email', email);
+        
+        // Store token in axios defaults
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
         showNotesContainer();
         showToast('Login successful!');
     } catch (error) {
-        showToast('Login failed', 'error');
+        showToast(error.response?.data?.error || 'Login failed', 'error');
     } finally {
         loginLoader.style.display = 'none';
     }
@@ -170,10 +289,22 @@ function displayNotes(notes) {
         noteElement.innerHTML = `
             <span>${note.title || 'Untitled'}</span>
             <div class="note-actions">
-                <button onclick="openInFloating(${JSON.stringify(note).replace(/"/g, '&quot;')})">Float</button>
-                <button onclick="event.stopPropagation(); deleteNote(${note.id}, event)">Delete</button>
+                <button class="float-btn">Float</button>
+                <button class="delete-btn">Delete</button>
             </div>
         `;
+        
+        // Add event listeners
+        noteElement.querySelector('.float-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            openInFloating(note);
+        });
+        
+        noteElement.querySelector('.delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteNote(note.id, e);
+        });
+        
         noteElement.addEventListener('click', () => selectNote(note));
         notesList.appendChild(noteElement);
     });
@@ -327,25 +458,24 @@ window.onclick = function(event) {
 async function loadQuill() {
     if (quillLoaded) return;
     
-    // Load CSS
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdn.quilljs.com/1.3.6/quill.snow.css';
-    document.head.appendChild(link);
-    
-    // Load JS
-    await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.quilljs.com/1.3.6/quill.js';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
+    try {
+        // Load CSS
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.quilljs.com/1.3.6/quill.snow.css';
+        document.head.appendChild(link);
+        
+        // Load JS
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.quilljs.com/1.3.6/quill.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
 
-    // Initialize Quill
-    quill = new Quill('#quill-editor', {
-        theme: 'snow',
-        modules: {
+        // Initialize Quill using the trusted initialization function
+        quill = initQuill('#quill-editor', {
             toolbar: [
                 ['bold', 'italic', 'underline', 'strike'],
                 ['blockquote', 'code-block'],
@@ -354,22 +484,25 @@ async function loadQuill() {
                 [{ 'color': [] }, { 'background': [] }],
                 ['clean']
             ]
-        }
-    });
+        });
 
-    // Set up auto-save and mark local changes
-    quill.on('text-change', () => {
-        isLocalChange = true;
-        clearTimeout(autoSaveTimeout);
-        showSavingIndicator();
-        autoSaveTimeout = setTimeout(() => {
-            saveNote().then(() => {
-                hideSavingIndicator();
-            });
-        }, 1000);
-    });
+        // Set up auto-save and mark local changes
+        quill.on('text-change', () => {
+            isLocalChange = true;
+            clearTimeout(autoSaveTimeout);
+            showSavingIndicator();
+            autoSaveTimeout = setTimeout(() => {
+                saveNote().then(() => {
+                    hideSavingIndicator();
+                });
+            }, 1000);
+        });
 
-    quillLoaded = true;
+        quillLoaded = true;
+    } catch (error) {
+        console.error('Failed to load Quill:', error);
+        showToast('Failed to load editor', 'error');
+    }
 }
 
 // Update closeEditor to clear interval

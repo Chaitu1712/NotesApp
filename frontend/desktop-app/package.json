@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Notes Desktop Application",
   "main": "index.js",
-  "author": "Chaitu1712",
+  "author": "chaitanya-Uike",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",

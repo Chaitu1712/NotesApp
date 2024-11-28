@@ -2,53 +2,57 @@
 <html>
 <head>
     <title>Notes App</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self' http://localhost:3000; 
+                   style-src 'self' https://cdn.quilljs.com 'unsafe-inline';
+                   script-src 'self' https://cdn.quilljs.com;
+                   img-src 'self' data: https:;
+                   connect-src 'self' http://localhost:3000;
+                   worker-src 'self'">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="referrer" content="strict-origin">
     <link rel="stylesheet" href="styles.css">
     <script src="preload.js"></script>
-    <!-- Remove direct Quill loading -->
-    <!-- <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script> -->
-    <script>
-        // Add electron bridge
-        if (window.require) {
-            window.electron = require('electron');
-        }
-    </script>
+    <script src="electron-bridge.js"></script>
 </head>
 <body>
     <div id="login-container">
+        <!-- Replace onclick with event listeners -->
         <h2>Login</h2>
         <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Password">
-        <button class="button-with-loader" onclick="login()">
+        <button class="button-with-loader" id="login-btn">
             Login
             <div class="loader" id="login-loader"></div>
         </button>
-        <button onclick="showRegister()">Register</button>
+        <button id="show-register-btn">Register</button>
     </div>
 
     <div id="notes-container" style="display: none;">
         <div id="sidebar">
             <div class="user-info">
                 <span id="user-email"></span>
-                <button onclick="logout()">Logout</button>
+                <button id="logout-btn">Logout</button>
             </div>
-            <button onclick="createFloatingNote()">Floating Note</button>
+            <button id="create-floating-btn">Floating Note</button>
             <div id="notes-list"></div>
         </div>
         <div id="content-area">
             <div id="editor" style="display: none;">
                 <div class="editor-header">
                     <input type="text" id="note-title" class="note-title-input" placeholder="Note Title">
-                    <button class="close-editor" onclick="closeEditor()">×</button>
+                    <button class="close-editor" id="close-editor-btn">×</button>
                 </div>
                 <div id="quill-editor"></div>
-                <button onclick="saveNote()">Save</button>
+                <button id="save-note-btn">Save</button>
             </div>
             <div id="placeholder">
                 <div class="placeholder-content">
                     <h2>Welcome to Notes App</h2>
                     <p>Select a note from the sidebar or create a new one to get started</p>
-                    <button onclick="createNote()">Create New Note</button>
+                    <button id="create-note-btn">Create New Note</button>
                 </div>
             </div>
         </div>
@@ -56,9 +60,9 @@
 
     <div id="register-modal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="hideRegister()">&times;</span>
+            <span class="close" id="hide-register-btn">&times;</span>
             <h2>Create Account</h2>
-            <form class="register-form" onsubmit="event.preventDefault(); register();">
+            <form class="register-form" id="register-form">
                 <input type="email" id="register-email" placeholder="Email" required>
                 <input type="password" id="register-password" placeholder="Password" required>
                 <input type="password" id="register-confirm-password" placeholder="Confirm Password" required>
