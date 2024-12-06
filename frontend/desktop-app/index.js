@@ -64,6 +64,10 @@ function createFloatingNote(event, noteData) {
     }
   });
 
+  // Ensure the floating window remains always on top
+  floatingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  floatingWindow.setAlwaysOnTop(true, 'screen-saver');
+
   const windowId = floatingWindow.id;
   floatingNotes.set(windowId, floatingWindow);
 
