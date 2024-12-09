@@ -259,7 +259,7 @@ body {
 }
 
 #quill-editor {
-    height: calc(100vh - 140px);
+    height: calc(100vh - 160px);
     margin-bottom: 10px;
 }
 
@@ -393,4 +393,22 @@ button{
 
 .placeholder-content p {
     margin-bottom: 20px;
+}
+
+
+#sidebar {
+    overflow-y: auto;
+}
+
+#sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+    background: #e0e0e0; /* Darker color for the scrollbar track */
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background: #f5f5f5; /* Same color as note background */
+    border-radius: 4px;
 }

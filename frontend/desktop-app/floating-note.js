@@ -5,9 +5,9 @@ const { initQuill } = require('./quill-init');
 
 // Add API configuration
 const API_CONFIG = {
-    development: 'http://localhost:3000',
-    production: 'http://localhost:3000',
-    staging: 'http://localhost:3000'
+    development: 'https://notesapp-jfne.onrender.com',
+    production: 'https://notesapp-jfne.onrender.com',
+    staging: 'https://notesapp-jfne.onrender.com'
 };
 
 const ENV = process.env.NODE_ENV || 'development';
@@ -75,6 +75,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         isLocalChange = true;
         startAutoSave();
     });
+
+    // Apply custom scrollbar styles
+    const quillEditor = document.querySelector('.ql-editor');
+    quillEditor.style.overflowY = 'auto';
+    quillEditor.style.scrollbarWidth = 'thin';
+    quillEditor.style.scrollbarColor = 'rgba(250, 248, 115, 0.95)  rgba(250, 248, 115, 0.95)';
+
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .ql-editor::-webkit-scrollbar {
+            width: 8px;
+        }
+        .ql-editor::-webkit-scrollbar-track {
+            background: #818025f2;
+            border-radius: 4px;
+        }
+        .ql-editor::-webkit-scrollbar-thumb {
+            background: #faf873f2;
+            border-radius: 4px;
+        }
+    `;
+    document.head.appendChild(style);
 
     // Add other event listeners
     // ...existing code...

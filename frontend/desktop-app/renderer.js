@@ -5,9 +5,9 @@ const ipcRenderer = electron.ipcRenderer;
 
 // Add API configuration
 const API_CONFIG = {
-    development: 'http://localhost:3000',
-    production: 'http://localhost:3000', // Update with your production API URL
-    staging: 'http://localhost:3000'      // Update with your staging API URL
+    development: 'https://notesapp-jfne.onrender.com',
+    production: 'https://notesapp-jfne.onrender.com',
+    staging: 'https://notesapp-jfne.onrender.com'
 };
 
 // Determine environment
@@ -497,6 +497,28 @@ async function loadQuill() {
                 });
             }, 1000);
         });
+
+        // Apply custom scrollbar styles
+        const quillEditor = document.querySelector('.ql-editor');
+        quillEditor.style.overflowY = 'auto';
+        quillEditor.style.scrollbarWidth = 'thin';
+        quillEditor.style.scrollbarColor = '#f5f5f5 #e0e0e0';
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .ql-editor::-webkit-scrollbar {
+                width: 8px;
+            }
+            .ql-editor::-webkit-scrollbar-track {
+                background: #e0e0e0;
+                border-radius: 4px;
+            }
+            .ql-editor::-webkit-scrollbar-thumb {
+                background: #f5f5f5;
+                border-radius: 4px;
+            }
+        `;
+        document.head.appendChild(style);
 
         quillLoaded = true;
     } catch (error) {
